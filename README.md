@@ -59,7 +59,6 @@ job-application-form/
 - **Live file preview** before submission — image thumbnail for JPG/PNG, file icon + name for PDF
 - **Real upload progress bar** (via Axios `onUploadProgress`) — reflects actual bytes sent, not a fake timer
 - **Frontend file validation** — rejects wrong file types and files over 5MB with specific error messages before hitting the backend
-- **Custom-built dropdown component** (replacing native `<select>`) for full styling control across all screen sizes, including mobile
 - Client-side validation with field-specific error messages for all form fields
 - Server-side validation (never trusts frontend alone) — backend independently re-validates file type and size via Multer
 - File upload via Multer — only PDF/JPG/PNG accepted, 5MB size limit, unique filenames to avoid collisions
