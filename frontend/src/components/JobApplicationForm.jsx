@@ -1,5 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
+import FileUploadBox from "./FileUploadBox";
+
+const API_BASE_URL = "http://localhost:5000";
 
 function JobApplicationForm() {
   // Har field ka data ek hi object mein store kar rahe hain
@@ -14,13 +17,18 @@ function JobApplicationForm() {
 
   // File alag se store hoga (text data ke saath nahi)
   const [resumeFile, setResumeFile] = useState(null);
-// Har field ka error message store karne ke liye
+  // Har field ka error message store karne ke liye
   const [errors, setErrors] = useState({});
   // Submit ho rahi hai ya nahi (loading)
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Real upload progress (0-100) — axios se aata hai, fake nahi
+  const [uploadProgress, setUploadProgress] = useState(0);
+  // Success ke baad uploaded file ka info (preview dikhane ke liye)
+  const [uploadedFile, setUploadedFile] = useState(null);
 
   // Success/error message dikhane ke liye
   const [submitStatus, setSubmitStatus] = useState(null); // { type: "success"/"error", message: "..." }
+
   // Jab bhi koi text/dropdown/date field change ho
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,9 +38,11 @@ function JobApplicationForm() {
     }));
   };
 
-  // Jab file select ho
-  const handleFileChange = (e) => {
-    setResumeFile(e.target.files[0]);
+  // Jab FileUploadBox se naya file mile (ya remove ho, to null milega)
+  const handleFileSelect = (file) => {
+    setResumeFile(file);
+    setErrors((prev) => ({ ...prev, resume: undefined }));
+    setUploadedFile(null); // naya file select hote hi purana uploaded preview hata do
   };
 
   // Sab fields ko check karta hai, errors object return karta hai
@@ -96,6 +106,7 @@ function JobApplicationForm() {
     setErrors({});
     setSubmitStatus(null);
     setIsSubmitting(true);
+    setUploadProgress(0);
 
     // Text data + file ko ek FormData object mein pack kar rahe hain
     const dataToSend = new FormData();
@@ -107,13 +118,24 @@ function JobApplicationForm() {
     dataToSend.append("experience", formData.experience);
     dataToSend.append("resume", resumeFile);
 
+    // Submit se pehle file ka type/name save kar lete hain (reset hone se pehle)
+    const submittedFileIsImage = resumeFile.type.startsWith("image/");
+    const submittedFileName = resumeFile.name;
+
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/applications",
+        `${API_BASE_URL}/api/applications`,
         dataToSend,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+          },
+          // Ye asli upload progress track karta hai — koi fake timer nahi
+          onUploadProgress: (progressEvent) => {
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percent);
           },
         }
       );
@@ -121,6 +143,14 @@ function JobApplicationForm() {
       setSubmitStatus({
         type: "success",
         message: response.data.message || "Application submitted successfully!",
+      });
+
+      // Backend se aayi filename se uploaded file ka URL banate hain
+      const savedFilename = response.data.data.resume;
+      setUploadedFile({
+        url: `${API_BASE_URL}/uploads/${savedFilename}`,
+        isImage: submittedFileIsImage,
+        name: submittedFileName,
       });
 
       // Form reset kar dete hain success ke baad
@@ -133,7 +163,6 @@ function JobApplicationForm() {
         experience: "",
       });
       setResumeFile(null);
-      e.target.reset(); // file input ko bhi visually clear karta hai
     } catch (error) {
       // Agar backend ne validation error bheja ho, to woh field-wise errors dikhao
       if (error.response && error.response.data && error.response.data.errors) {
@@ -150,8 +179,10 @@ function JobApplicationForm() {
       }
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
+
   return (
     <div className="form-container">
       <h1>Job Application Form</h1>
@@ -161,7 +192,7 @@ function JobApplicationForm() {
         {/* Full Name */}
         <div className="form-group">
           <label htmlFor="fullName">Full Name</label>
-         <input
+          <input
             type="text"
             id="fullName"
             name="fullName"
@@ -175,7 +206,7 @@ function JobApplicationForm() {
         {/* Email */}
         <div className="form-group">
           <label htmlFor="email">Email Address</label>
-         <input
+          <input
             type="email"
             id="email"
             name="email"
@@ -189,7 +220,7 @@ function JobApplicationForm() {
         {/* Phone */}
         <div className="form-group">
           <label htmlFor="phone">Phone Number</label>
-         <input
+          <input
             type="tel"
             id="phone"
             name="phone"
@@ -203,7 +234,7 @@ function JobApplicationForm() {
         {/* Date of Birth */}
         <div className="form-group">
           <label htmlFor="dateOfBirth">Date of Birth</label>
-         <input
+          <input
             type="date"
             id="dateOfBirth"
             name="dateOfBirth"
@@ -225,7 +256,7 @@ function JobApplicationForm() {
             <option value="">-- Select Gender --</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
-           <option value="Other">Other</option>
+            <option value="Other">Other</option>
           </select>
           {errors.gender && <span className="error-message">{errors.gender}</span>}
         </div>
@@ -244,31 +275,62 @@ function JobApplicationForm() {
             <option value="0-1 years">0-1 years</option>
             <option value="1-3 years">1-3 years</option>
             <option value="3-5 years">3-5 years</option>
-           <option value="5+ years">5+ years</option>
+            <option value="5+ years">5+ years</option>
           </select>
           {errors.experience && <span className="error-message">{errors.experience}</span>}
         </div>
 
-        {/* Resume Upload */}
+        {/* Resume Upload — ab naya FileUploadBox use ho raha hai */}
         <div className="form-group">
-          <label htmlFor="resume">Upload Resume (PDF, JPG, or PNG)</label>
-          <input
-            type="file"
-            id="resume"
-            name="resume"
-            onChange={handleFileChange}
-            accept=".pdf,.jpg,.jpeg,.png"
+          <label>Upload Resume (PDF, JPG, or PNG)</label>
+          <FileUploadBox
+            file={resumeFile}
+            onFileSelect={handleFileSelect}
+            error={errors.resume}
           />
-          {errors.resume && <span className="error-message">{errors.resume}</span>}
         </div>
 
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Submitting..." : "Submit Application"}
         </button>
 
+        {/* Real upload progress bar — sirf submit ke time dikhega */}
+        {isSubmitting && (
+          <div className="upload-progress-wrap">
+            <div
+              className="upload-progress-fill"
+              style={{ width: `${uploadProgress}%` }}
+            />
+            <span className="upload-progress-label">{uploadProgress}%</span>
+          </div>
+        )}
+
         {submitStatus && (
           <div className={`status-banner ${submitStatus.type}`}>
             {submitStatus.message}
+          </div>
+        )}
+
+        {/* Success ke baad uploaded file dikhana */}
+        {uploadedFile && (
+          <div className="uploaded-result">
+            <p className="uploaded-result-label">✅ Uploaded file:</p>
+            {uploadedFile.isImage ? (
+              <img
+                src={uploadedFile.url}
+                alt={uploadedFile.name}
+                className="uploaded-result-img"
+              />
+            ) : (
+              
+                <a href={uploadedFile.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="uploaded-result-doc"
+              >
+                📄 {uploadedFile.name} (Open / Download)
+              </a>
+            )}
           </div>
         )}
       </form>
