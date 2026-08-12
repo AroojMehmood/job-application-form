@@ -145,7 +145,6 @@ The app was tested for the following cases:
 | File over 5MB selected/dropped | Specific error shown ("File size must be less than 5 MB."), file not sent to backend |
 | Valid file submitted | Real progress bar animates 0–100%, success banner shown |
 | After successful upload | Uploaded image renders inline, or PDF shows a working "Open / Download" link |
-| Gender / Experience dropdown on mobile width | Custom dropdown stays within the form container, no overflow |
 | Page refreshed after upload | Existing form functionality unaffected |
 | Responsive check | Form, upload UI, and dropdowns display correctly on mobile-width screens |
 
@@ -157,5 +156,4 @@ Backend was independently tested using **Postman** (form-data body with file upl
 
 - Uploaded files are stored on the server's local filesystem (`backend/uploads/`) with only the filename saved in MongoDB — this is the standard, beginner-friendly approach (storing large binary files directly in MongoDB is not recommended).
 - Uploaded files are served via Express's static middleware (`app.use("/uploads", express.static("uploads"))`), which gives each file a public URL for preview/download without needing a third-party service like Cloudinary or S3.
-- The Gender and Experience fields use a custom-built dropdown component instead of the native HTML `<select>`, because native select popups are rendered by the browser/OS and can visually overflow their container on some screen sizes — a custom component keeps full styling and layout control.
 - `.env` and `node_modules` are excluded from version control via `.gitignore` to protect credentials.
