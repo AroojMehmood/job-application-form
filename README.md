@@ -1,6 +1,6 @@
-# Job Application Form — MERN Stack Project
+# Job Application Form + Analytics Dashboard — MERN Stack Project
 
-A full-stack Job Application Form built with **MongoDB, Express, React, and Node.js (MERN)**, featuring a polished drag-and-drop file upload system (resume/image) with live preview and real upload progress, a custom-built dropdown UI, client-side and server-side validation, loading states, and success/error feedback.
+A full-stack Job Application system built with **MongoDB, Express, React, and Node.js (MERN)**. It includes a polished drag-and-drop resume upload form with live preview and real upload progress, plus an **Analytics Dashboard** with interactive data visualizations built from real backend data.
 
 ---
 
@@ -10,11 +10,12 @@ A full-stack Job Application Form built with **MongoDB, Express, React, and Node
 - React (Vite)
 - Axios (API calls + real upload progress via `onUploadProgress`)
 - FormData (for sending text + file together)
-- CSS (custom, responsive, fully custom-styled form controls)
+- Recharts (dashboard data visualizations — bar, donut/pie, and line charts)
+- CSS (custom, responsive, fully custom-styled form and dashboard components)
 
 **Backend:**
 - Node.js + Express
-- MongoDB + Mongoose
+- MongoDB + Mongoose (including aggregation pipelines for dashboard statistics)
 - Multer (file upload handling, local disk storage)
 - Express static file serving (`/uploads`) for viewing/downloading uploaded files
 - dotenv (environment variables)
@@ -33,7 +34,7 @@ job-application-form/
 │   ├── middleware/
 │   │   └── upload.js          (Multer config — storage, file filter, size limit)
 │   ├── routes/
-│   │   └── applicationRoutes.js
+│   │   └── applicationRoutes.js   (POST / — submit application, GET /stats — dashboard analytics)
 │   ├── uploads/                (uploaded resume/image files, served statically)
 │   ├── .env                    (MongoDB URI — not committed to GitHub)
 │   ├── .gitignore
@@ -45,7 +46,9 @@ job-application-form/
     │   ├── components/
     │   │   ├── JobApplicationForm.jsx
     │   │   ├── FileUploadBox.jsx   (drag & drop upload UI + preview + validation)
-    │   ├── App.jsx
+    │   │   ├── Dashboard.jsx       (analytics dashboard — data fetching, filters, charts)
+    │   │   └── StatCard.jsx        (reusable stat card component)
+    │   ├── App.jsx                 (view switcher — Form / Dashboard)
     │   └── App.css
     └── package.json
 ```
@@ -54,20 +57,32 @@ job-application-form/
 
 ## ✨ Features
 
-- 7 form fields: Full Name, Email, Phone, Date of Birth, Gender (custom dropdown), Experience Level (custom dropdown), Resume/Image upload
+### Job Application Form
+- 7 form fields: Full Name, Email, Phone, Date of Birth, Gender, Experience Level, Resume/Image upload
 - **Drag-and-drop file upload** with a styled file picker fallback (no plain `<input type="file">`)
 - **Live file preview** before submission — image thumbnail for JPG/PNG, file icon + name for PDF
 - **Real upload progress bar** (via Axios `onUploadProgress`) — reflects actual bytes sent, not a fake timer
 - **Frontend file validation** — rejects wrong file types and files over 5MB with specific error messages before hitting the backend
-- **Custom-built dropdown component** (replacing native `<select>`) for full styling control across all screen sizes, including mobile
 - Client-side validation with field-specific error messages for all form fields
-- Server-side validation (never trusts frontend alone) — backend independently re-validates file type and size via Multer
+- Server-side validation (never trusts frontend alone) — backend independently re-validates all fields and the uploaded file
 - File upload via Multer — only PDF/JPG/PNG accepted, 5MB size limit, unique filenames to avoid collisions
 - **Uploaded file display after success** — image renders inline, PDF shows an "Open / Download" link (served via Express static middleware)
 - Loading state ("Submitting...") with disabled button during request
 - Success and error banners after submission
 - Fully responsive — works on mobile screens, including the upload UI and dropdowns
 - Data persisted in MongoDB Atlas
+
+### Analytics Dashboard
+- **View switcher** — a pill-style tab bar lets users toggle between the Application Form and the Dashboard without a page reload (no router needed)
+- **3 data visualizations**, all fed by real MongoDB data via a dedicated aggregation endpoint (`GET /api/applications/stats`):
+  - **Bar chart** — applications grouped by experience level
+  - **Donut chart** — applications grouped by gender
+  - **Line chart** — submissions over time (daily count)
+- **3 stat cards** — Total Applications, Freshers, Experienced (calculated from real data)
+- **Interactive date-range filter** — All Time / Last 7 Days / This Month / Last Month — updates stat cards and all three charts together, no page reload
+- **Loading, error, and empty states** — a spinner-equivalent loading message while fetching, a clear error message if the API call fails, and a friendly empty-state message when no data matches the selected filter
+- Fully responsive — charts resize using Recharts' `ResponsiveContainer`, layout adapts for tablet and mobile with no horizontal overflow
+- Aggregation (total count, gender breakdown, experience breakdown, daily submission counts) is computed server-side in MongoDB using `$match`, `$group`, and `$count`-style aggregation pipelines — not recalculated on the frontend
 
 ---
 
@@ -95,6 +110,7 @@ npm run dev
 
 Server runs on `http://localhost:5000`
 Uploaded files are accessible at `http://localhost:5000/uploads/<filename>`
+Dashboard statistics are available at `http://localhost:5000/api/applications/stats` (accepts optional `from` and `to` query params, e.g. `?from=2026-08-01&to=2026-08-12`)
 
 ### Frontend
 
@@ -132,7 +148,7 @@ For production deployments, IP whitelisting is handled differently (e.g. via a f
 
 ## 🧪 Testing
 
-The app was tested for the following cases:
+### Job Application Form
 
 | Test | Expected Result |
 |---|---|
@@ -146,11 +162,25 @@ The app was tested for the following cases:
 | File over 5MB selected/dropped | Specific error shown ("File size must be less than 5 MB."), file not sent to backend |
 | Valid file submitted | Real progress bar animates 0–100%, success banner shown |
 | After successful upload | Uploaded image renders inline, or PDF shows a working "Open / Download" link |
-| Gender / Experience dropdown on mobile width | Custom dropdown stays within the form container, no overflow |
 | Page refreshed after upload | Existing form functionality unaffected |
 | Responsive check | Form, upload UI, and dropdowns display correctly on mobile-width screens |
 
 Backend was independently tested using **Postman** (form-data body with file upload) to confirm both valid submissions and validation failures work correctly at the API level, independent of the frontend.
+
+### Analytics Dashboard
+
+| Test | Expected Result |
+|---|---|
+| Existing form after adding dashboard | Form still works exactly as before — no regression |
+| Dashboard opened with real data present | Stat cards and all 3 charts render actual MongoDB-backed numbers |
+| Bar chart | Displays real applications-by-experience data |
+| Donut chart | Displays real applications-by-gender data |
+| Line chart | Displays real submissions-over-time data |
+| Filter changed (e.g. "Last 7 Days") | Stat cards and all 3 charts update immediately, no page reload |
+| Mobile width (375px) | No chart overflow, cards stack in a single column, filter buttons wrap correctly |
+| Tablet width (768px) | No horizontal scroll, charts and cards resize cleanly |
+| Filter selected with no matching data | "No application data available yet." shown instead of broken/empty charts |
+| Backend stopped, dashboard refreshed/filtered | "Failed to load dashboard data." error message shown |
 
 ---
 
@@ -158,5 +188,6 @@ Backend was independently tested using **Postman** (form-data body with file upl
 
 - Uploaded files are stored on the server's local filesystem (`backend/uploads/`) with only the filename saved in MongoDB — this is the standard, beginner-friendly approach (storing large binary files directly in MongoDB is not recommended).
 - Uploaded files are served via Express's static middleware (`app.use("/uploads", express.static("uploads"))`), which gives each file a public URL for preview/download without needing a third-party service like Cloudinary or S3.
-- The Gender and Experience fields use a custom-built dropdown component instead of the native HTML `<select>`, because native select popups are rendered by the browser/OS and can visually overflow their container on some screen sizes — a custom component keeps full styling and layout control.
+- The dashboard's `GET /api/applications/stats` endpoint was added as a new, separate route — the existing `POST /api/applications` submission route and its validation logic were not modified in any way.
+- View switching between the Application Form and Dashboard is handled with local React state (`useState`) rather than a routing library, since the app only has two views and a router wasn't already part of the project.
 - `.env` and `node_modules` are excluded from version control via `.gitignore` to protect credentials.

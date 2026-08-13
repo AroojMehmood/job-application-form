@@ -78,4 +78,69 @@ router.post("/", upload.single("resume"), async (req, res) => {
   }
 });
 
+// GET /api/applications/stats - dashboard ke liye aggregated statistics
+router.get("/stats", async (req, res) => {
+  try {
+    const { from, to } = req.query; // optional date range filter
+
+    // Date filter build karo agar from/to diya gaya ho
+    const dateFilter = {};
+    if (from) dateFilter.$gte = new Date(from);
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999); // pura din include karo
+      dateFilter.$lte = toDate;
+    }
+    const matchStage = Object.keys(dateFilter).length > 0
+      ? { createdAt: dateFilter }
+      : {};
+
+    const [total, byGender, byExperience, byDate] = await Promise.all([
+      Application.countDocuments(matchStage),
+
+      Application.aggregate([
+        { $match: matchStage },
+        { $group: { _id: "$gender", count: { $sum: 1 } } },
+      ]),
+
+      Application.aggregate([
+        { $match: matchStage },
+        { $group: { _id: "$experience", count: { $sum: 1 } } },
+      ]),
+
+      Application.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    // Freshers count nikal lo (stat card ke liye)
+    const freshersEntry = byExperience.find((e) => e._id === "Fresher");
+    const freshersCount = freshersEntry ? freshersEntry.count : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        total,
+        freshers: freshersCount,
+        byGender: byGender.map((g) => ({ name: g._id, value: g.count })),
+        byExperience: byExperience.map((e) => ({ name: e._id, value: e.count })),
+        byDate: byDate.map((d) => ({ date: d._id, count: d.count })),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching stats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching statistics.",
+    });
+  }
+});
+
 module.exports = router;
