@@ -4,6 +4,19 @@ A full-stack Job Application system built with **MongoDB, Express, React, and No
 
 ---
 
+## 📌 Development Timeline
+
+This project was built incrementally across four sequential internship tasks, all on the same job application form project:
+
+1. **Task 1 — Forms, Validation & Real User Feedback:** Core job application form with client-side and server-side validation, and real-time user feedback (error/success messages).
+2. **Task 2 — File/Image Upload UI Connected to Backend Storage:** Drag-and-drop resume upload UI connected to Multer-based backend storage, with live preview and real upload progress tracking.
+3. **Task 3 — Dashboard with Data Visualization:** Analytics Dashboard added on top of the form (Recharts visualizations, date-range filter, MongoDB aggregation pipelines).
+4. **Task 4 — Testing Across the Stack:** Automated tests added across the full stack — frontend (Vitest + React Testing Library), backend (Vitest + Supertest, isolated via MongoDB Memory Server), and end-to-end (Playwright).
+
+Each task was completed and submitted before work began on the next, so the current `main` branch reflects the combined result of all four.
+
+---
+
 ## 🚀 Tech Stack
 
 **Frontend:**
@@ -35,22 +48,37 @@ job-application-form/
 │   │   └── upload.js          (Multer config — storage, file filter, size limit)
 │   ├── routes/
 │   │   └── applicationRoutes.js   (POST / — submit application, GET /stats — dashboard analytics)
+│   ├── tests/
+│   │   ├── setup.js            (starts/stops in-memory MongoDB for tests)
+│   │   ├── stats.test.js
+│   │   └── applications.test.js
 │   ├── uploads/                (uploaded resume/image files, served statically)
 │   ├── .env                    (MongoDB URI — not committed to GitHub)
 │   ├── .gitignore
-│   ├── server.js
+│   ├── app.js                  (Express app — no DB connection, used by tests)
+│   ├── server.js                (connects to Atlas + starts the real dev server)
+│   ├── test-server.js           (isolated server for E2E tests — in-memory MongoDB only)
+│   ├── vitest.config.js
 │   └── package.json
 │
-└── frontend/
-    ├── src/
-    │   ├── components/
-    │   │   ├── JobApplicationForm.jsx
-    │   │   ├── FileUploadBox.jsx   (drag & drop upload UI + preview + validation)
-    │   │   ├── Dashboard.jsx       (analytics dashboard — data fetching, filters, charts)
-    │   │   └── StatCard.jsx        (reusable stat card component)
-    │   ├── App.jsx                 (view switcher — Form / Dashboard)
-    │   └── App.css
-    └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── JobApplicationForm.jsx
+│   │   │   ├── JobApplicationForm.test.jsx  (5 frontend tests)
+│   │   │   ├── FileUploadBox.jsx   (drag & drop upload UI + preview + validation)
+│   │   │   ├── Dashboard.jsx       (analytics dashboard — data fetching, filters, charts)
+│   │   │   └── StatCard.jsx        (reusable stat card component)
+│   │   ├── setupTests.js       (jest-dom matchers for tests)
+│   │   ├── App.jsx                 (view switcher — Form / Dashboard)
+│   │   └── App.css
+│   └── package.json
+│
+├── e2e/
+│   └── application.spec.js     (Playwright E2E test — full user flow)
+│
+├── playwright.config.js         (starts backend + frontend, runs E2E tests)
+└── package.json                 (root-level, for Playwright)
 ```
 
 ---
@@ -191,3 +219,54 @@ Backend was independently tested using **Postman** (form-data body with file upl
 - The dashboard's `GET /api/applications/stats` endpoint was added as a new, separate route — the existing `POST /api/applications` submission route and its validation logic were not modified in any way.
 - View switching between the Application Form and Dashboard is handled with local React state (`useState`) rather than a routing library, since the app only has two views and a router wasn't already part of the project.
 - `.env` and `node_modules` are excluded from version control via `.gitignore` to protect credentials.
+
+## 🧪 Testing
+
+This project has automated tests across the full stack: frontend (Vitest + React Testing Library), backend (Vitest + Supertest), and end-to-end (Playwright).
+
+### ⚠️ Important: Test Database Isolation
+All automated tests use **MongoDB Memory Server** (an in-memory MongoDB instance) — **never** the real MongoDB Atlas database. No real data is ever read, written, or deleted during testing.
+
+### Install dependencies
+```bash
+cd frontend && npm install
+cd ../backend && npm install
+cd .. && npm install
+npx playwright install chromium
+```
+
+### Run frontend tests
+```bash
+cd frontend
+npm test
+```
+
+### Run backend tests
+```bash
+cd backend
+npm test
+```
+
+### Run E2E tests
+1. Start the isolated test backend (uses in-memory MongoDB):
+```bash
+   cd backend
+   node test-server.js
+```
+2. In a separate terminal, start the frontend:
+```bash
+   cd frontend
+   npm run dev
+```
+3. In a third terminal, from the project root:
+```bash
+   npx playwright test
+```
+
+### Run everything
+Frontend and backend tests can each be run independently with `npm test` in their respective folders. E2E tests require both servers running as described above.
+
+### Test Summary
+- ✅ 5 frontend tests (rendering, user input, validation)
+- ✅ 5 backend tests (successful submission, validation failures)
+- ✅ 1 end-to-end test (full user flow: fill form → upload file → submit → success)

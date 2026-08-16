@@ -1,0 +1,25 @@
+{
+  "name": "job-application-form",
+  "version": "1.0.0",
+  "description": "A full-stack Job Application system built with **MongoDB, Express, React, and Node.js (MERN)**. It includes a polished drag-and-drop resume upload form with live preview and real upload progress, plus an **Analytics Dashboard** with interactive data visualizations built from real backend data.",
+  "main": "playwright.config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1" ,
+    "test:e2e": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AroojMehmood/job-application-form.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AroojMehmood/job-application-form/issues"
+  },
+  "homepage": "https://github.com/AroojMehmood/job-application-form#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

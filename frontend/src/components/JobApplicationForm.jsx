@@ -188,7 +188,7 @@ function JobApplicationForm() {
       <h1>Job Application Form</h1>
       <p>Please fill out the form below to apply for this position.</p>
 
-      <form onSubmit={handleSubmit}>
+     <form onSubmit={handleSubmit} noValidate>
         {/* Full Name */}
         <div className="form-group">
           <label htmlFor="fullName">Full Name</label>
